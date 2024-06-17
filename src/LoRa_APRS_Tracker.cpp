@@ -252,7 +252,8 @@ void checkDeepSleepNeeded() {
   if (Config.secondsToSleepWhenNoMotion <= 0 // Sleep not activated
       || lastTx < Config.standingUpdateTime * 60 * 1000 // A trame has been sent so there is movement or Kiss
       || bluetoothConnected  // Device connected on Bluetooth so can't sleep
-      || POWER_Utils::isUsbConnected()) { // USB connected so don't need to sleep
+      || POWER_Utils::isUsbConnected() // USB is connected
+      || millis() < Config.standingUpdateTime * 60 * 1000) { // First boot, so we let a chance to the GPS to be fixed
     return;
   }
 
