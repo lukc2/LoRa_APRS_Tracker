@@ -6,16 +6,15 @@
 #include "winlink_utils.h"
 #include "station_utils.h"
 #include "configuration.h"
-#include "button_utils.h"
 #include "power_utils.h"
-#include "pins_config.h"
+#include "boards_pinout.h"
 #include "msg_utils.h"
 #include "display.h"
 
 #ifdef TTGO_T_DECK_GPS
-#define KB_ADDR     0x55    // T-Deck internal keyboard (Keyboard Backlight On = ALT + B)
+    #define KB_ADDR     0x55    // T-Deck internal keyboard (Keyboard Backlight On = ALT + B)
 #else
-#define KB_ADDR     0x5F    // CARDKB from m5stack.com (YEL - SDA / WTH SCL)
+    #define KB_ADDR     0x5F    // CARDKB from m5stack.com (YEL - SDA / WTH SCL)
 #endif
 
 
@@ -29,9 +28,6 @@ extern uint32_t         menuTime;
 extern uint8_t          myBeaconsIndex;
 extern int              myBeaconsSize;
 extern uint8_t          loraIndex;
-extern bool             keyboardConnected;
-extern bool             keyDetected;
-extern uint32_t         keyboardTime;
 extern bool             displayState;
 extern uint32_t         displayTime;
 extern bool             displayEcoMode;
@@ -57,17 +53,26 @@ extern bool             winlinkCommentState;
 
 extern std::vector<String>  outputMessagesBuffer;
 
-bool mouseUpState           = 0;
-bool mouseDownState         = 0;
-bool mouseLeftState         = 0;
-bool mouseRightState        = 0;
-int debounceInterval        = 50;
-uint32_t lastDebounceTime   = millis();
-int upCounter               = 0;
-int downCounter             = 0;
-int leftCounter             = 0;
-int rightCounter            = 0;
-int trackBallSensitivity    = 5;
+bool        keyboardConnected       = false;
+bool        keyDetected             = false;
+uint32_t    keyboardTime            = millis();
+
+String      messageCallsign         = "";
+String      messageText             = "";
+
+int         messagesIterator        = 0;
+
+bool        mouseUpState            = 0;
+bool        mouseDownState          = 0;
+bool        mouseLeftState          = 0;
+bool        mouseRightState         = 0;
+int         debounceInterval        = 50;
+uint32_t    lastDebounceTime        = millis();
+int         upCounter               = 0;
+int         downCounter             = 0;
+int         leftCounter             = 0;
+int         rightCounter            = 0;
+int         trackBallSensitivity    = 5;
 
 
 namespace KEYBOARD_Utils {
@@ -325,7 +330,7 @@ namespace KEYBOARD_Utils {
             statusState  = true;
             statusTime = millis();
             winlinkCommentState = false;
-            show_display("__ INFO __", "", "  CHANGING CALLSIGN!", "", "-----> " + Config.beacons[myBeaconsIndex].callsign, 2000);
+            show_display("__ INFO __", "", "  CHANGING CALLSIGN!", "", "-----> " + Config.beacons[myBeaconsIndex].callsign, "", 2000);
             STATION_Utils::saveIndex(0, myBeaconsIndex);
             if (menuDisplay == 200) {
                 menuDisplay = 20;
@@ -333,14 +338,14 @@ namespace KEYBOARD_Utils {
         } else if ((menuDisplay >= 1 && menuDisplay <= 3) || (menuDisplay >= 11 &&menuDisplay <= 13) || (menuDisplay >= 20 && menuDisplay <= 27) || (menuDisplay >= 30 && menuDisplay <= 31)) {
             menuDisplay = menuDisplay * 10;
         } else if (menuDisplay == 10) {
-            MSG_Utils::loadMessagesFromMemory("APRS");
+            MSG_Utils::loadMessagesFromMemory(0);
             if (MSG_Utils::warnNoAPRSMessages()) {
                 menuDisplay = 10;
             } else {
                 menuDisplay = 100;
             }
         } else if (menuDisplay == 120) {
-            MSG_Utils::deleteFile("APRS");
+            MSG_Utils::deleteFile(0);
             show_display("___INFO___", "", "ALL MESSAGES DELETED!", 2000);
             MSG_Utils::loadNumMessages();
             menuDisplay = 12;
@@ -348,21 +353,21 @@ namespace KEYBOARD_Utils {
             if (keyDetected) {
                 menuDisplay = 1300;
             } else {
-                show_display(" APRS Thu.", "Sending:", "Happy #APRSThursday", "from LoRa Tracker 73!", 2000);
+                show_display(" APRS Thu.", "Sending:", "Happy #APRSThursday", "from LoRa Tracker 73!", "", "", 2000);
                 MSG_Utils::addToOutputBuffer(0, "ANSRVR", "CQ HOTG Happy #APRSThursday from LoRa Tracker 73!");
             }
         } else if (menuDisplay == 131) {
             if (keyDetected) {
                 menuDisplay = 1310;
             } else {
-                show_display(" APRS Thu.", "Sending:", "Happy #APRSThursday", "from LoRa Tracker 73!", 2000);
+                show_display(" APRS Thu.", "Sending:", "Happy #APRSThursday", "from LoRa Tracker 73!", "", "", 2000);
                 MSG_Utils::addToOutputBuffer(0, "APRSPH" , "HOTG Happy #APRSThursday from LoRa Tracker 73!");
             }
         } else if (menuDisplay == 132) {
-            show_display(" APRS Thu.", "", "   Unsubscribe", "   from APRS Thursday", 2000);
+            show_display(" APRS Thu.", "", "   Unsubscribe", "   from APRS Thursday", "", "", 2000);
             MSG_Utils::addToOutputBuffer(0, "ANSRVR", "U HOTG");
         } else if (menuDisplay == 133) {
-            show_display(" APRS Thu.", "", "  Keep Subscribed" ,"  for 12hours more", 2000);
+            show_display(" APRS Thu.", "", "  Keep Subscribed" ,"  for 12hours more", "", "", 2000);
             MSG_Utils::addToOutputBuffer(0, "ANSRVR", "K HOTG");
         }
 
@@ -387,15 +392,15 @@ namespace KEYBOARD_Utils {
                 screenBrightness = 1;
             }
         } else if (menuDisplay == 240) {
-            show_display("_STATUS___", "", "WRITE STATUS","STILL IN DEVELOPMENT!", 2000); /////////////////////////
+            show_display("_STATUS___", "", "WRITE STATUS","STILL IN DEVELOPMENT!", "", "", 2000); /////////////////////////
         } else if (menuDisplay == 241) {
-            show_display("_STATUS___", "", "SELECT STATUS","STILL IN DEVELOPMENT!", 2000); /////////////////////////
+            show_display("_STATUS___", "", "SELECT STATUS","STILL IN DEVELOPMENT!", "", "", 2000); /////////////////////////
         } else if (menuDisplay == 250) {
-            show_display("_NOTIFIC__", "", "NOTIFICATIONS","STILL IN DEVELOPMENT!", 2000); /////////////////////////
+            show_display("_NOTIFIC__", "", "NOTIFICATIONS","STILL IN DEVELOPMENT!", "", "", 2000); /////////////////////////
         } 
 
         else if (menuDisplay == 4) {
-            logger.log(logging::LoggerLevel::LOGGER_LEVEL_DEBUG, "Loop", "%s", "wrl");
+            logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "Loop", "%s", "wrl");
             MSG_Utils::addToOutputBuffer(0, "CA2RXU-15", "wrl");
         }
 
@@ -405,7 +410,7 @@ namespace KEYBOARD_Utils {
             WINLINK_Utils::login();
             menuDisplay = 500;
         } else if (menuDisplay == 51) {
-            MSG_Utils::loadMessagesFromMemory("WLNK");
+            MSG_Utils::loadMessagesFromMemory(1);
             if (MSG_Utils::warnNoWLNKMails()) {
                 menuDisplay = 51;
             } else {
@@ -427,7 +432,7 @@ namespace KEYBOARD_Utils {
         } else if (menuDisplay == 5010) {
             menuDisplay = 50100;
         } else if (menuDisplay == 50100) {
-            MSG_Utils::loadMessagesFromMemory("WLNK");
+            MSG_Utils::loadMessagesFromMemory(1);
             if (MSG_Utils::warnNoWLNKMails()) {
                 menuDisplay = 50100;
             } else {
@@ -436,7 +441,7 @@ namespace KEYBOARD_Utils {
         } else if (menuDisplay == 50110) {
             menuDisplay = 50111;
         } else if (menuDisplay == 50111) {
-            MSG_Utils::deleteFile("WLNK");
+            MSG_Utils::deleteFile(1);
             show_display("___INFO___", "", " ALL MAILS DELETED!", 2000);
             MSG_Utils::loadNumMessages();
             if (winlinkStatus == 0) {
@@ -483,33 +488,33 @@ namespace KEYBOARD_Utils {
         } else if (menuDisplay == 60) {
             if (Config.notification.ledFlashlight) {
                 if (flashlight) {
-                    show_display("__EXTRAS__", "","     Flashlight","   Status --> OFF","", 2000);
+                    show_display("__EXTRAS__", "","     Flashlight","   Status --> OFF", "", "", 2000);
                     flashlight = false;
                 } else {
-                    show_display("__EXTRAS__", "","     Flashlight","   Status --> ON","", 2000);
+                    show_display("__EXTRAS__", "","     Flashlight","   Status --> ON", "", "", 2000);
                     flashlight = true;
                 }
             } else {
-                show_display("__EXTRAS__", "","     Flashlight","NOT ACTIVE IN CONFIG!","", 2000);
+                show_display("__EXTRAS__", "","     Flashlight","NOT ACTIVE IN CONFIG!", "", "", 2000);
             }
         } else if (menuDisplay == 61) {
             if (digirepeaterActive) {
-                show_display("__EXTRAS__", "","   DigiRepeater","   Status --> OFF","", 2000);
-                logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "Main", "%s", "DigiRepeater OFF");
+                show_display("__EXTRAS__", "","   DigiRepeater","   Status --> OFF", "", "", 2000);
+                logger.log(logging::LoggerLevel::LOGGER_LEVEL_WARN, "Main", "%s", "DigiRepeater OFF");
                 digirepeaterActive = false;
             } else {
-                show_display("__EXTRAS__", "","   DigiRepeater","   Status --> ON","", 2000);
-                logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "Main", "%s", "DigiRepeater ON");
+                show_display("__EXTRAS__", "","   DigiRepeater","   Status --> ON","", "", 2000);
+                logger.log(logging::LoggerLevel::LOGGER_LEVEL_WARN, "Main", "%s", "DigiRepeater ON");
                 digirepeaterActive = true;
             }
         } else if (menuDisplay == 62) {
             if (sosActive) {
-                show_display("__EXTRAS__", "","       S.O.S.","   Status --> OFF","", 2000);
-                logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "Main", "%s", "S.O.S Mode OFF");
+                show_display("__EXTRAS__", "","       S.O.S.","   Status --> OFF", "", "", 2000);
+                logger.log(logging::LoggerLevel::LOGGER_LEVEL_WARN, "Main", "%s", "S.O.S Mode OFF");
                 sosActive = false;
             } else {
-                show_display("__EXTRAS__", "","       S.O.S.","   Status --> ON","", 2000);
-                logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "Main", "%s", "S.O.S Mode ON");
+                show_display("__EXTRAS__", "","       S.O.S.","   Status --> ON", "", "", 2000);
+                logger.log(logging::LoggerLevel::LOGGER_LEVEL_WARN, "Main", "%s", "S.O.S Mode ON");
                 sosActive = true;
             }
         } else if (menuDisplay == 63) {
@@ -771,69 +776,70 @@ namespace KEYBOARD_Utils {
 
     void mouseRead() {
         #ifdef TTGO_T_DECK_GPS
-        int ballUp      = digitalRead(TrackBallUp);
-        int ballDown    = digitalRead(TrackBallDown);
-        int ballLeft    = digitalRead(TrackBallLeft);
-        int ballRight   = digitalRead(TrackBallRight);
+            int ballUp      = digitalRead(TrackBallUp);
+            int ballDown    = digitalRead(TrackBallDown);
+            int ballLeft    = digitalRead(TrackBallLeft);
+            int ballRight   = digitalRead(TrackBallRight);
 
-        if (!digitalRead(TrackBallCenter)) {
-            processPressedKey(13);
-        } else if (ballUp != mouseUpState && ballDown == mouseDownState && ballLeft == mouseLeftState && ballRight == mouseRightState) {
-            if (millis() - lastDebounceTime > debounceInterval) {
-                lastDebounceTime = millis();
-                mouseUpState = ballUp;
-                upCounter++;
+            if (!digitalRead(TrackBallCenter)) {
+                processPressedKey(13);
+            } else if (ballUp != mouseUpState && ballDown == mouseDownState && ballLeft == mouseLeftState && ballRight == mouseRightState) {
+                if (millis() - lastDebounceTime > debounceInterval) {
+                    lastDebounceTime = millis();
+                    mouseUpState = ballUp;
+                    upCounter++;
+                }
+            } else if (ballDown != mouseDownState && ballUp == mouseUpState && ballLeft == mouseLeftState && ballRight == mouseRightState) {
+                if (millis() - lastDebounceTime > debounceInterval) {
+                    lastDebounceTime = millis();
+                    mouseDownState = ballDown;
+                    downCounter++;
+                }
+            } else if (ballLeft != mouseLeftState && ballUp == mouseUpState && ballDown == mouseDownState && ballRight == mouseRightState) {
+                if (millis() - lastDebounceTime > debounceInterval) {
+                    lastDebounceTime = millis();
+                    mouseLeftState = ballLeft;
+                    leftCounter++;
+                }
+            } else if (ballRight != mouseRightState && ballUp == mouseUpState && ballDown == mouseDownState && ballLeft == mouseLeftState) {
+                if (millis() - lastDebounceTime > debounceInterval) {
+                    lastDebounceTime = millis();
+                    mouseRightState = ballRight;
+                    rightCounter++;
+                }
             }
-        } else if (ballDown != mouseDownState && ballUp == mouseUpState && ballLeft == mouseLeftState && ballRight == mouseRightState) {
-            if (millis() - lastDebounceTime > debounceInterval) {
-                lastDebounceTime = millis();
-                mouseDownState = ballDown;
-                downCounter++;
+            if (upCounter == trackBallSensitivity) {
+                clearTrackballCounter();
+                upArrow();
+            } else if (downCounter == trackBallSensitivity) {
+                clearTrackballCounter();
+                downArrow();
+            } else if (leftCounter == trackBallSensitivity) {
+                clearTrackballCounter();
+                leftArrow();
+            } else if (rightCounter == trackBallSensitivity) {
+                clearTrackballCounter();
+                rightArrow();
             }
-        } else if (ballLeft != mouseLeftState && ballUp == mouseUpState && ballDown == mouseDownState && ballRight == mouseRightState) {
-            if (millis() - lastDebounceTime > debounceInterval) {
-                lastDebounceTime = millis();
-                mouseLeftState = ballLeft;
-                leftCounter++;
-            }
-        } else if (ballRight != mouseRightState && ballUp == mouseUpState && ballDown == mouseDownState && ballLeft == mouseLeftState) {
-            if (millis() - lastDebounceTime > debounceInterval) {
-                lastDebounceTime = millis();
-                mouseRightState = ballRight;
-                rightCounter++;
-            }
-        }
-        if (upCounter == trackBallSensitivity) {
-            clearTrackballCounter();
-            upArrow();
-        } else if (downCounter == trackBallSensitivity) {
-            clearTrackballCounter();
-            downArrow();
-        } else if (leftCounter == trackBallSensitivity) {
-            clearTrackballCounter();
-            leftArrow();
-        } else if (rightCounter == trackBallSensitivity) {
-            clearTrackballCounter();
-            rightArrow();
-        }
         #endif
     }
 
     void read() {
-        uint32_t lastKey = millis() - keyboardTime;
-        if (lastKey > 30*1000) {
-            keyDetected = false;
-        }
-        Wire.requestFrom(KB_ADDR, 1);
-        while(Wire.available()) {
-            char c = Wire.read();
-            if (c != 0) {
+        if (keyboardConnected) {
+            uint32_t lastKey = millis() - keyboardTime;
+            if (lastKey > 30*1000) {
+                keyDetected = false;
+            }
+            Wire.requestFrom(KB_ADDR, 1);
+            while(Wire.available()) {
+                char c = Wire.read();
+                if (c != 0) {
+                    // just for debugging
+                    //Serial.print(c, DEC); Serial.print(" "); Serial.print(c, HEX); Serial.print(" "); Serial.println(char(c));
 
-                // just for debugging
-                //Serial.print(c, DEC); Serial.print(" "); Serial.print(c, HEX); Serial.print(" "); Serial.println(char(c));
-
-                keyboardTime = millis();
-                processPressedKey(c);      
+                    keyboardTime = millis();
+                    processPressedKey(c);      
+                }
             }
         }
     }
@@ -844,7 +850,7 @@ namespace KEYBOARD_Utils {
             keyboardConnected = true;
             logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "Main", "Keyboard Connected to I2C");
         } else {
-            logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "Main", "No Keyboard Connected to I2C");
+            logger.log(logging::LoggerLevel::LOGGER_LEVEL_DEBUG, "Main", "No Keyboard Connected to I2C");
         }
     }
 

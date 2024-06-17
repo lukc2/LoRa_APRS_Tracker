@@ -1,9 +1,11 @@
 #include <NimBLEDevice.h>
+#include "configuration.h"
 #include "ax25_utils.h"
 #include "lora_utils.h"
 #include "ble_utils.h"
 #include "display.h"
 #include "logger.h"
+
 
 #define SERVICE_UUID            "00000001-ba2a-46c9-ae49-01b0961f68bb"
 #define CHARACTERISTIC_UUID_TX  "00000003-ba2a-46c9-ae49-01b0961f68bb"
@@ -13,6 +15,7 @@ BLEServer *pServer;
 BLECharacteristic *pCharacteristicTx;
 BLECharacteristic *pCharacteristicRx;
 
+extern Configuration    Config;
 extern logging::Logger  logger;
 extern bool             sendBleToLoRa;
 extern bool             bluetoothConnected;
@@ -41,7 +44,11 @@ class MyCallbacks : public NimBLECharacteristicCallbacks {
             //Serial.print(" ");
             receivedString += receivedData[i];
         }
-        BLEToLoRaPacket = AX25_Utils::AX25FrameToLoRaPacket(receivedString);
+        if (Config.bluetoothType == 0) {
+            BLEToLoRaPacket = AX25_Utils::AX25FrameToLoRaPacket(receivedString);
+        } else if (Config.bluetoothType == 2) {
+            BLEToLoRaPacket = receivedString;
+        }
         sendBleToLoRa = true;
     }
 };
@@ -84,14 +91,14 @@ namespace BLE_Utils {
 
         pAdvertising->start();
 
-        logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "BLE", "%s", "Waiting for BLE central to connect...");
+        logger.log(logging::LoggerLevel::LOGGER_LEVEL_DEBUG, "BLE", "%s", "Waiting for BLE central to connect...");
     }
 
     void sendToLoRa() {
         if (!sendBleToLoRa) {
             return;
         }
-        logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "BLE Tx", "%s", BLEToLoRaPacket.c_str());
+        logger.log(logging::LoggerLevel::LOGGER_LEVEL_DEBUG, "BLE Tx", "%s", BLEToLoRaPacket.c_str());
         show_display("BLE Tx >>", "", BLEToLoRaPacket, 1000);
         LoRa_Utils::sendNewPacket(BLEToLoRaPacket);
         BLEToLoRaPacket = "";
@@ -104,33 +111,46 @@ namespace BLE_Utils {
         delay(3);
     }
 
-    void txToPhoneOverBLE(String frame) {
-        txBLE((byte)KissChar::Fend);
-        txBLE((byte)KissCmd::Data);
+    void txToPhoneOverBLE(const String& frame) {
+        if (Config.bluetoothType == 0) {
+            txBLE((byte)KissChar::Fend);
+            txBLE((byte)KissCmd::Data);
+        }        
         for(int n = 0; n < frame.length(); n++) {
             uint8_t byteCharacter = frame[n];
-            if (byteCharacter == KissChar::Fend) {
-                txBLE((byte)KissChar::Fesc);
-                txBLE((byte)KissChar::Tfend);
-            } else if (byteCharacter == KissChar::Fesc) {
-                txBLE((byte)KissChar::Fesc);
-                txBLE((byte)KissChar::Tfesc);
-            } else {
+            if (Config.bluetoothType == 2) {
                 txBLE(byteCharacter);
-            }       
+            } else {
+                if (byteCharacter == KissChar::Fend) {
+                    txBLE((byte)KissChar::Fesc);
+                    txBLE((byte)KissChar::Tfend);
+                } else if (byteCharacter == KissChar::Fesc) {
+                    txBLE((byte)KissChar::Fesc);
+                    txBLE((byte)KissChar::Tfesc);
+                } else {
+                    txBLE(byteCharacter);
+                }
+            }    
         }
-        txBLE((byte)KissChar::Fend);
+        if (Config.bluetoothType == 0) {
+            txBLE((byte)KissChar::Fend);
+        } else if (Config.bluetoothType == 2) {
+            txBLE('\n');
+        }   
     }
 
     void sendToPhone(const String& packet) {
-        if (!packet.isEmpty()) {
-            logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "BLE Rx", "%s", packet.c_str());
+        if (!packet.isEmpty() && bluetoothConnected) {
+            logger.log(logging::LoggerLevel::LOGGER_LEVEL_DEBUG, "BLE Rx", "%s", packet.c_str());
             String receivedPacketString = "";
             for (int i = 0; i < packet.length(); i++) {
                 receivedPacketString += packet[i];
             }
-            String AX25Frame = AX25_Utils::LoRaPacketToAX25Frame(receivedPacketString);
-            txToPhoneOverBLE(AX25Frame);      
+            if (Config.bluetoothType == 0) {
+                txToPhoneOverBLE(AX25_Utils::LoRaPacketToAX25Frame(receivedPacketString));
+            } else if (Config.bluetoothType == 2) {
+                txToPhoneOverBLE(receivedPacketString);                
+            }
         }
     }
 

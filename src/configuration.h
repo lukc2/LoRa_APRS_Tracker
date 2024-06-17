@@ -39,8 +39,8 @@ public:
 class BME {
 public:
     bool    active;
+    float   temperatureCorrection;
     bool    sendTelemetry;
-    int     heightCorrection;
 };
 
 class Notification {
@@ -107,8 +107,8 @@ public:
     uint64_t secondsToSleepWhenNoMotion;
 
     Configuration();
-    bool validateConfigFile(String currentBeaconCallsign);
-    bool validateMicE(String currentBeaconMicE);
+    bool validateConfigFile(const String& currentBeaconCallsign);
+    bool validateMicE(const String& currentBeaconMicE);
 
 private:
     void readFile(fs::FS &fs, const char *fileName) ;

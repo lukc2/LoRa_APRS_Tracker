@@ -3,47 +3,47 @@
 
 #include <Arduino.h>
 #if defined(HAS_AXP2101) || defined(HAS_AXP192)
-#include "XPowersLib.h"
+    #include "XPowersLib.h"
 #else
-#include <Wire.h>
+    #include <Wire.h>
 #endif
 
 namespace POWER_Utils {
 
-    double getBatteryVoltage();
-    String getBatteryInfoVoltage();
-    String getBatteryInfoCurrent();
-    bool getBatteryInfoIsConnected();
+    double  getBatteryVoltage();
+    const String getBatteryInfoVoltage();
+    const String getBatteryInfoCurrent();
+    bool    getBatteryInfoIsConnected();
 
-    void enableChgLed();
-    void disableChgLed();
+    void    enableChgLed();
+    void    disableChgLed();
 
-    bool isCharging();
-    void handleChargingLed();
-    double getBatteryChargeDischargeCurrent();
-    bool isBatteryConnected();
-    void obtainBatteryInfo();
-    void batteryManager();
-    bool isUsbConnected();
+    bool    isCharging();
+    void    handleChargingLed();
+    double  getBatteryChargeDischargeCurrent();
+    bool    isBatteryConnected();
+    void    obtainBatteryInfo();
+    void    batteryManager();
+    bool    isUsbConnected();
     uint64_t getIrqPinMask();
 
-    void activateMeasurement();
-    void deactivateMeasurement();
+    void    activateMeasurement();
+    void    deactivateMeasurement();
 
-    void activateGPS();
-    void deactivateGPS();
+    void    activateGPS();
+    void    deactivateGPS();
 
-    void activateLoRa();
-    void deactivateLoRa();
+    void    activateLoRa();
+    void    deactivateLoRa();
 
-    void externalPinSetup();
+    void    externalPinSetup();
 
-    bool begin(TwoWire &port);
-    void setup();
+    bool    begin(TwoWire &port);
+    void    setup();
 
-    void lowerCpuFrequency();
-    void shutdown();
-
+    void    lowerCpuFrequency();
+    void    shutdown();
+  
 }
 
 #endif

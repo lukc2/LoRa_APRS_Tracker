@@ -22,7 +22,6 @@ extern int                  messagesIterator;
 extern uint8_t              loraIndex;
 extern uint32_t             menuTime;
 extern bool                 symbolAvailable;
-extern uint8_t              lowBatteryPercent;
 extern bool                 keyDetected;
 extern String               messageCallsign;
 extern String               messageText;
@@ -43,20 +42,27 @@ extern String               winlinkBody;
 extern String               winlinkAlias;
 extern String               winlinkAliasComplete;
 extern bool                 winlinkCommentState;
+extern int                  wxModuleType;
 
-String freqChangeWarning;
+String      freqChangeWarning;
+uint8_t     lowBatteryPercent       = 21;
 
 namespace MENU_Utils {
 
-    String checkBTType() {
-        if (Config.bluetoothType == 0) {
-            return "BLE iPhone";
-        } else {
-            return "BT Android";
+    const String checkBTType() {
+        switch (Config.bluetoothType) {
+            case 0:
+                return "BLE iPhone";
+            case 1:
+                return "BT Android";
+            case 2:
+                return "BLE Text";
+            default:
+                return "no BT";
         }
     }
 
-    String checkProcessActive(bool process) {
+    const String checkProcessActive(const bool process) {
         if (process) {
             return "ON";
         } else {
@@ -64,11 +70,11 @@ namespace MENU_Utils {
         }
     }
 
-    String checkScreenBrightness(uint8_t bright) {
+    const String screenBrightnessAsString(const uint8_t bright) {
         if (bright == 255) {
             return "MAX";
         } else {
-            return "MIN";
+            return "min";
         }
     }
 
@@ -213,21 +219,19 @@ namespace MENU_Utils {
                 break;
 
             case 210:   // 2.Configuration ---> Change Frequency
-                if (loraIndex == 0) {
-                    freqChangeWarning = "      Eu --> PL";
-                } else if (loraIndex == 1) {
-                    freqChangeWarning = "      PL --> UK";
-                } else if (loraIndex == 2) {
-                    freqChangeWarning = "      UK --> Eu";
+                switch (loraIndex) {
+                    case 0: freqChangeWarning = "      Eu --> PL"; break;
+                    case 1: freqChangeWarning = "      PL --> UK"; break;
+                    case 2: freqChangeWarning = "      UK --> Eu"; break;
                 }
-                show_display("LORA__FREQ", "","   Confirm Change?",freqChangeWarning,"","<Back         Select>");
+                show_display("LORA__FREQ", "","   Confirm Change?", freqChangeWarning, "", "<Back         Select>");
                 break;
 
             case 220:   // 2.Configuration ---> Display ---> ECO Mode
-                show_display("_DISPLAY__", "", "> ECO Mode    (" + checkProcessActive(displayEcoMode) + ")","  Brightness  (" + checkScreenBrightness(screenBrightness) + ")","",lastLine);
+                show_display("_DISPLAY__", "", "> ECO Mode    (" + checkProcessActive(displayEcoMode) + ")","  Brightness  (" + screenBrightnessAsString(screenBrightness) + ")","",lastLine);
                 break;
             case 221:   // 2.Configuration ---> Display ---> Brightness
-                show_display("_DISPLAY__", "", "  ECO Mode    (" + checkProcessActive(displayEcoMode) + ")","> Brightness  (" + checkScreenBrightness(screenBrightness) + ")","",lastLine);
+                show_display("_DISPLAY__", "", "  ECO Mode    (" + checkProcessActive(displayEcoMode) + ")","> Brightness  (" + screenBrightnessAsString(screenBrightness) + ")","",lastLine);
                 break;
 
             case 230:
@@ -306,10 +310,11 @@ namespace MENU_Utils {
                     double courseTo   = TinyGPSPlus::courseTo(gps.location.lat(), gps.location.lng(), lastReceivedPacket.latitude, lastReceivedPacket.longitude);
 
                     if (lastReceivedPacket.path.length()>14) {
-                        pathDec = "P:" + lastReceivedPacket.path;
+                        pathDec = "P:";
                     } else {
-                        pathDec = "PATH:  " +lastReceivedPacket.path;
+                        pathDec = "PATH:  ";
                     }
+                    pathDec += lastReceivedPacket.path;
 
                     show_display(firstLineDecoder, "GPS  " + String(lastReceivedPacket.latitude,2) + " " + String(lastReceivedPacket.longitude,2), courseSpeedAltitude, "D:" + String(distanceKm) + "km    " + String(courseTo,0), pathDec, "< RSSI:" + String(lastReceivedPacket.rssi) + " SNR:" + String(lastReceivedPacket.snr));
                 } else if (lastReceivedPacket.type==1) {    // message
@@ -410,7 +415,7 @@ namespace MENU_Utils {
                 show_display("WLNK__MENU", "  Forward Mail (F#)", "> Delete Mail  (K#)", "  Alias Menu", "  Log Out", lastLine);
                 break;
             case 5051:    // WINLINK: Delete Mail //
-                show_display("WLNK___DEL", "", "   DELETE MAIL N."  + winlinkMailNumber, "", "<Back          Enter>");
+                show_display("WLNK___DEL", "", "   DELETE MAIL N."  + winlinkMailNumber, "", "", "<Back          Enter>");
                 break;
 
             case 5060:    // WINLINK: Alias Menu //
@@ -517,16 +522,16 @@ namespace MENU_Utils {
                     const auto time_now = now();
                     secondRowMainMenu = Utils::createDateString(time_now) + "   " + Utils::createTimeString(time_now);
                     if (time_now % 10 < 5) {
-                        thirdRowMainMenu = String(gps.location.lat(), 4) + " " + String(gps.location.lng(), 4);
+                        thirdRowMainMenu = String(gps.location.lat(), 4);
+                        thirdRowMainMenu += " ";
+                        thirdRowMainMenu += String(gps.location.lng(), 4);
                     } else {
                         thirdRowMainMenu = String(Utils::getMaidenheadLocator(gps.location.lat(), gps.location.lng(), 8));
                         thirdRowMainMenu += " LoRa[";
-                        if (loraIndex == 0) {
-                            thirdRowMainMenu += "Eu]";
-                        } else if (loraIndex == 1) {
-                            thirdRowMainMenu += "PL]";
-                        } else if (loraIndex == 2) {
-                            thirdRowMainMenu += "UK]";
+                        switch (loraIndex) {
+                            case 0: thirdRowMainMenu += "Eu]"; break;
+                            case 1: thirdRowMainMenu += "PL]"; break;
+                            case 2: thirdRowMainMenu += "UK]"; break;
                         }
                     }
 
@@ -542,11 +547,9 @@ namespace MENU_Utils {
                         hdopState = "+";
                     }
 
-                    if (gps.satellites.value() > 9) {
-                        thirdRowMainMenu += String(gps.satellites.value()) + hdopState;
-                    } else {
-                        thirdRowMainMenu += " " + String(gps.satellites.value()) + hdopState;
-                    }
+                    if (gps.satellites.value() <= 9) thirdRowMainMenu += " ";
+                    thirdRowMainMenu += String(gps.satellites.value());
+                    thirdRowMainMenu += hdopState;
 
                     String fourthRowAlt = String(gps.altitude.meters(),0);
                     fourthRowAlt.trim();
@@ -567,40 +570,55 @@ namespace MENU_Utils {
                             fourthRowCourse = "0" + fourthRowCourse;
                         }
                     }
-                    if (Config.bme.active) {
-                        if (time_now % 10 < 5) {
-                            fourthRowMainMenu = "A=" + fourthRowAlt + "m  " + fourthRowSpeed + "km/h  " + fourthRowCourse;
-                        } else {
-                            fourthRowMainMenu = BME_Utils::readDataSensor("OLED");
-                        }
-                    } else {
-                        fourthRowMainMenu = "A=" + fourthRowAlt + "m  " + fourthRowSpeed + "km/h  " + fourthRowCourse;
+                    fourthRowMainMenu = "A=";
+                    fourthRowMainMenu += fourthRowAlt;
+                    fourthRowMainMenu += "m  ";
+                    fourthRowMainMenu += fourthRowSpeed;
+                    fourthRowMainMenu += "km/h  ";
+                    fourthRowMainMenu += fourthRowCourse;
+                    if (Config.bme.active && (time_now % 10 < 5) && wxModuleType != 0) {
+                        fourthRowMainMenu = BME_Utils::readDataSensor(1);
                     }
                     if (MSG_Utils::getNumWLNKMails() > 0) {
-                        fourthRowMainMenu = "** WLNK MAIL: " + String(MSG_Utils::getNumWLNKMails()) + " **";
+                        fourthRowMainMenu = "** WLNK MAIL: ";
+                        fourthRowMainMenu += String(MSG_Utils::getNumWLNKMails());
+                        fourthRowMainMenu += " **";
                     }
                     if (MSG_Utils::getNumAPRSMessages() > 0) {
-                        fourthRowMainMenu = "*** MESSAGES: " + String(MSG_Utils::getNumAPRSMessages()) + " ***";
+                        fourthRowMainMenu = "*** MESSAGES: ";
+                        fourthRowMainMenu += String(MSG_Utils::getNumAPRSMessages());
+                        fourthRowMainMenu += " ***";
                     }
                 }
                 #endif
 
-                fifthRowMainMenu  = "LAST Rx = " + MSG_Utils::getLastHeardTracker();
+                fifthRowMainMenu = "LAST Rx = ";
+                fifthRowMainMenu += MSG_Utils::getLastHeardTracker();
 
                 if (POWER_Utils::getBatteryInfoIsConnected()) {
                     String batteryVoltage = POWER_Utils::getBatteryInfoVoltage();
                     String batteryCharge = POWER_Utils::getBatteryInfoCurrent();
-                    #if defined(TTGO_T_Beam_V0_7) || defined(TTGO_T_LORA32_V2_1_GPS) || defined(TTGO_T_LORA32_V2_1_TNC) || defined(HELTEC_V3_GPS) || defined(HELTEC_WIRELESS_TRACKER) 
-					    sixthRowMainMenu = "Bat: " + batteryVoltage + "V";
+                    #if defined(TTGO_T_Beam_V0_7) || defined(TTGO_T_LORA32_V2_1_GPS) || defined(TTGO_T_LORA32_V2_1_TNC) || defined(HELTEC_V3_GPS) || defined(HELTEC_WIRELESS_TRACKER) || defined(TTGO_T_DECK_GPS)
+					    sixthRowMainMenu = "Bat: ";
+                        sixthRowMainMenu += batteryVoltage;
+                        sixthRowMainMenu += "V";
                     #endif
                     #if defined(TTGO_T_Beam_V1_0) || defined(TTGO_T_Beam_V1_0_SX1268)
-                    if (batteryCharge.toInt() == 0) {
-                        sixthRowMainMenu = "Battery Charged " + batteryVoltage + "V";
-                    } else if (batteryCharge.toInt() > 0) {
-                        sixthRowMainMenu = "Bat: " + batteryVoltage + "V (charging)";
-                    } else {
-                        sixthRowMainMenu = "Battery " + batteryVoltage + "V " + batteryCharge + "mA";
-                    }
+                        if (batteryCharge.toInt() == 0) {
+                            sixthRowMainMenu = "Battery Charged ";
+                            sixthRowMainMenu += batteryVoltage;
+                            sixthRowMainMenu += "V";
+                        } else if (batteryCharge.toInt() > 0) {
+                            sixthRowMainMenu = "Bat: ";
+                            sixthRowMainMenu += batteryVoltage;
+                            sixthRowMainMenu += "V (charging)";
+                        } else {
+                            sixthRowMainMenu = "Battery ";
+                            sixthRowMainMenu += batteryVoltage;
+                            sixthRowMainMenu += "V ";
+                            sixthRowMainMenu += batteryCharge;
+                            sixthRowMainMenu += "mA";
+                        }
                     #endif
                     #if defined(TTGO_T_Beam_V1_2) || defined(TTGO_T_Beam_V1_2_SX1262) || defined(TTGO_T_Beam_S3_SUPREME_V3)
                         if (Config.notification.lowBatteryBeep && !POWER_Utils::isCharging() && batteryCharge.toInt() < lowBatteryPercent) {
@@ -615,22 +633,30 @@ namespace MENU_Utils {
                         }
                         batteryVoltage = batteryVoltage.toFloat()/1000;
                         if (POWER_Utils::isCharging() && batteryCharge!="100") {
-                            sixthRowMainMenu = "Bat: " + String(batteryVoltage) + "V (charging)";
+                            sixthRowMainMenu = "Bat: ";
+                            sixthRowMainMenu += String(batteryVoltage);
+                            sixthRowMainMenu += "V (charging)";
                         } else if (!POWER_Utils::isCharging() && batteryCharge=="100") {
-                            sixthRowMainMenu = "Battery Charged " + String(batteryVoltage) + "V";
+                            sixthRowMainMenu = "Battery Charged ";
+                            sixthRowMainMenu += String(batteryVoltage);
+                            sixthRowMainMenu += "V";
                         } else {
-                            sixthRowMainMenu = "Battery  " + String(batteryVoltage) + "V   " + batteryCharge + "%";
+                            sixthRowMainMenu = "Battery  ";
+                            sixthRowMainMenu += String(batteryVoltage);
+                            sixthRowMainMenu += "V   ";
+                            sixthRowMainMenu += batteryCharge;
+                            sixthRowMainMenu += "%";
                         }
                     #endif
                 } else {
                     sixthRowMainMenu = "No Battery Connected" ;
                 }
-                show_display(String(firstRowMainMenu),
-                            String(secondRowMainMenu),
-                            String(thirdRowMainMenu),
-                            String(fourthRowMainMenu),
-                            String(fifthRowMainMenu),
-                            String(sixthRowMainMenu));
+                show_display(firstRowMainMenu,
+                            secondRowMainMenu,
+                            thirdRowMainMenu,
+                            fourthRowMainMenu,
+                            fifthRowMainMenu,
+                            sixthRowMainMenu);
                 break;
         }
     }
