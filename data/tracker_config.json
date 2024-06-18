@@ -75,7 +75,8 @@
 		"bluetoothActive": true,
 		"disableBluetoothIfNotUsedOnBattery": false,
 		"disableGPS": false,
-		"secondsToSleepWhenNoMotion": 0
+		"secondsToSleepWhenNoMotion": 0,
+		"wakeupByUsb": false
 	},
 	"winlink": {
 		"password": "ABCDEF"

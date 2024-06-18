@@ -105,6 +105,7 @@ public:
     bool    disableBluetoothIfNotUsedOnBattery;
     bool    disableGPS;
     uint64_t secondsToSleepWhenNoMotion;
+    bool    wakeupByUsb;
 
     Configuration();
     bool validateConfigFile(const String& currentBeaconCallsign);

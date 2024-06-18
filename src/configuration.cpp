@@ -105,6 +105,7 @@ void Configuration::readFile(fs::FS &fs, const char *fileName) {
     disableBluetoothIfNotUsedOnBattery      = data["other"]["disableBluetoothIfNotUsedOnBattery"].as<bool>();
     disableGPS                    = data["other"]["disableGPS"].as<bool>();
     secondsToSleepWhenNoMotion    = data["other"]["secondsToSleepWhenNoMotion"].as<int>();
+    wakeupByUsb                   = data["other"]["wakeupByUsb"].as<bool>();
 
     configFile.close();
 }

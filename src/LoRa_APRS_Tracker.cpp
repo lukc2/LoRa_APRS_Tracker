@@ -45,7 +45,7 @@ TinyGPSPlus                         gps;
     OneButton userButton                = OneButton(BUTTON_PIN, true, true);
 #endif
 
-String      versionDate             = "2024.06.08-F4HVV";
+String      versionDate             = "2024.06.18-F4HVV";
 
 uint8_t     myBeaconsIndex          = 0;
 int         myBeaconsSize           = Config.beacons.size();
@@ -270,7 +270,9 @@ void checkDeepSleepNeeded() {
   esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_OFF);
   esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_OFF);
   esp_sleep_pd_config(ESP_PD_DOMAIN_XTAL, ESP_PD_OPTION_OFF);
-  esp_sleep_enable_ext1_wakeup(POWER_Utils::getIrqPinMask(), ESP_EXT1_WAKEUP_ALL_LOW); // Wake up when USB inserted
+  if (Config.wakeupByUsb) {
+    esp_sleep_enable_ext1_wakeup(POWER_Utils::getIrqPinMask(), ESP_EXT1_WAKEUP_ALL_LOW);// Wake up when USB plugged
+  }
   esp_sleep_enable_timer_wakeup(Config.secondsToSleepWhenNoMotion * 1000 * 1000);
   esp_deep_sleep_start();
 }
