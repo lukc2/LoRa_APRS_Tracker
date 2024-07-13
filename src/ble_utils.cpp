@@ -6,11 +6,12 @@
 #include "display.h"
 #include "logger.h"
 
-
+// APPLE - APRS.fi app
 #define SERVICE_UUID_0            "00000001-ba2a-46c9-ae49-01b0961f68bb"
 #define CHARACTERISTIC_UUID_TX_0  "00000003-ba2a-46c9-ae49-01b0961f68bb"
 #define CHARACTERISTIC_UUID_RX_0  "00000002-ba2a-46c9-ae49-01b0961f68bb"
 
+// ANDROID - BLE Terminal app (Serial Bluetooth Terminal from Playstore)
 #define SERVICE_UUID_2            "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
 #define CHARACTERISTIC_UUID_TX_2  "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
 #define CHARACTERISTIC_UUID_RX_2  "6E400003-B5A3-F393-E0A9-E50E24DCCA9E"
