@@ -184,12 +184,17 @@ namespace LoRa_Utils {
                         receivedLoraPacket.freqError  = radio.getFrequencyError();
                     }
                 } else {
+                    //Serial.println(packet);
                     Serial.print(F("failed, code "));   // 7 = CRC mismatch
                     Serial.println(state);
                 }
             }
         }
         return receivedLoraPacket;
+    }
+
+    void wakeRadio() {
+        radio.startReceive();
     }
 
     void sleepRadio() {

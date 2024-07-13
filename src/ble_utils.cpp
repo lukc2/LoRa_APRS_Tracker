@@ -38,6 +38,9 @@ class MyServerCallbacks : public NimBLEServerCallbacks {
         bluetoothConnected = false;
         logger.log(logging::LoggerLevel::LOGGER_LEVEL_INFO, "BLE", "%s", "BLE client Disconnected, Started Advertising");
         pServer->startAdvertising();
+        LoRa_Utils::sleepRadio();
+        delay(500);
+        LoRa_Utils::wakeRadio();
     }
 };
 
